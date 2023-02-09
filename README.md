@@ -4,4 +4,4 @@ This repository contains the AtomicSwap Contract for Casper and other Networks. 
 
 | Title                                                                                                          	| Description                                     	|
 |----------------------------------------------------------------------------------------------------------------	|-------------------------------------------------	|
-| [Casper AtomicSwap](https://github.com/k3rn3lpanicc/Atomic-Swap-Casper-Ethereum-Stacks/tree/main/AtomicCasper) 	| AtomicSwap Implementation in for casper-network 	|
+| [Casper AtomicSwap](https://github.com/k3rn3lpanicc/Atomic-Swap/tree/main/AtomicCasper) 	| AtomicSwap Implementation in for casper-network 	|
