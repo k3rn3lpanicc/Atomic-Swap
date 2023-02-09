@@ -1,6 +1,8 @@
+
 use alloc::string::String;
 use casper_contract::contract_api::storage;
 use casper_types::{EntryPoint, EntryPoints, contracts::{Parameters, NamedKeys}, Parameter, Group, AccessRights};
+use alloc::{string::ToString};
 
 // pub const RUNTIME_ARG_METADATA : &str = "metadata";
 // pub const RUNTIME_ARG_RECIPIENT : &str = "recipient";
@@ -13,6 +15,7 @@ use casper_types::{EntryPoint, EntryPoints, contracts::{Parameters, NamedKeys}, 
 // pub const RUNTIME_ARG_REQUEST_ID : &str = "request_id";
 
 pub const NAMED_KEY_HASH : &str = "hash";
+pub const NAMED_KEY_HASH_TYPE : &str = "hash_type";
 pub const NAMED_KEY_SECRET : &str = "secret";
 pub const NAMED_KEY_TYPE : &str = "type";
 pub const NAMED_KEY_OWNER : &str = "owner";
@@ -23,8 +26,10 @@ pub const NAMED_KEY_START_TIME : &str = "start_time";
 pub const NAMED_KEY_END_TIME : &str = "end_time";
 pub const NAMED_KEY_PURSE: &str = "purse";
 
+pub const ARG_SECRET: &str = "secret";
 pub const ARG_CONTRACT_HASH: &str = "contract_hash";
 pub const ARG_HASH : &str = "hash";
+pub const ARG_HASH_TYPE : &str = "hash_type";
 pub const ARG_TIMEOUT: &str = "timeout";
 pub const ARG_TYPE: &str = "type";
 pub const ARG_AMOUNT: &str = "amount";

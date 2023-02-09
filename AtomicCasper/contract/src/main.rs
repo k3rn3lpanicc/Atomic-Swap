@@ -21,7 +21,7 @@ use alloc::{string::{String, ToString}, collections::BTreeSet};
 use casper_contract::{contract_api::{runtime::{self, get_caller}, storage, system::{get_purse_balance, create_purse}}, unwrap_or_revert::UnwrapOrRevert};
 use constants::{get_entrypoints, get_named_keys};
 use casper_types::{RuntimeArgs, ApiError, URef, U512, ContractPackageHash, CLValue, AccessRights};
-use utils::{check_ownership, set_start_time, get_current_time, set_end_time, set_key, is_timed_out};
+use utils::{check_ownership, set_start_time, get_current_time, set_end_time, set_key, is_timed_out, _hash};
 /// An error enum which can be converted to a `u16` so it can be returned as an `ApiError::User`.
 #[repr(u16)]
 pub enum Error {
@@ -41,6 +41,7 @@ pub enum Error {
     KeyNotFound = 13,
     EndTimeNotReached = 14,
     EndTimePassed = 15,
+    HashTypeNotSupported = 16,
 }
 impl From<Error> for ApiError {
     fn from(error: Error) -> Self {
@@ -60,16 +61,20 @@ pub extern "C" fn get_hash(){
 pub extern "C" fn unlock(){
     // if it it timed out, then return back the money
     if check_ownership(){
-        if!is_timed_out(){
+        if !is_timed_out(){
             runtime::revert(Error::EndTimeNotReached);
         }
         // pay back tokens or money
+
     }
     else{
         if is_timed_out(){
             runtime::revert(Error::EndTimePassed);
         }
         // transfer tokens or money
+        let secret = runtime::get_named_arg::<String>(constants::ARG_SECRET);
+        set_key(constants::NAMED_KEY_HASH, _hash(secret.clone()));
+        
     }
 }
 
@@ -81,7 +86,13 @@ pub extern "C" fn initiate(){
         runtime::revert(Error::AccessDenied);
     }
     let hash = runtime::get_named_arg::<String>(constants::ARG_HASH);
+    let hash_type = runtime::get_named_arg::<String>(constants::ARG_HASH_TYPE);
+    if !check_hash_type(hash_type.as_str()){
+        runtime::revert(Error::HashTypeNotSupported);
+    }
     set_key(constants::NAMED_KEY_HASH, hash.clone());
+    
+    set_key(constants::NAMED_KEY_HASH_TYPE, hash_type.clone());
     let type_ = runtime::get_named_arg::<String>(constants::ARG_TYPE);    
     if type_ != "NFT" && type_ != "ERC-20" && type_ != "Direct"{ 
         // NFT : NFT mode neeeds to set the contract_hash field
