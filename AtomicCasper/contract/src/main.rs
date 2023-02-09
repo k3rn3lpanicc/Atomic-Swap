@@ -57,7 +57,7 @@ pub extern "C" fn get_hash(){
 
 
 #[no_mangle]
-pub extern "C" fn transfer(){
+pub extern "C" fn unlock(){
     // if it it timed out, then return back the money
     if check_ownership(){
         if!is_timed_out(){

@@ -30,4 +30,34 @@ Work in progress
 
 ## Contract type
 after deployment of the contract, the `init` entrypoint is called, to build storage variables and assign them values, after that, the owner of the contract can call `initiate` 
-entrypoint with given information below, to start the process of AtomicSwap on this contract. you need to pass : 
+entrypoint with given information below, to start the process of AtomicSwap on this contract.
+
+`initiate` entrypoint gets `type::String` argument, which must be one of : `NFT`, `ERC-20`, `Direct`, or `Custom`
+
+It also gets an `hash::String` argument, which is a hash of the secret key that will be used to unlock the contract, the hash must be generated using `XXX` algorithm. Also it gets a `destination::AccountHash` argument, which is the account hash of the other account that will be involved in the swap process.
+
+
+### **NFT**
+if the type is `NFT`, the contract will expect the following arguments in the `initiate` entrypoint (besides the `type`, `hash`, `destination` arguments) :
+- `contract_hash` : the hash of the contract that holds the NFT token, your contract must have access to this contract in order to transfer the token to/from it. it will be checked in the contract and if it doesn't have access, the contract will revert the transaction.
+
+### **ERC-20**
+if the type is `ERC-20`, the contract will expect the following arguments in the `initiate` entrypoint (besides the `type`, `hash` and `destination` arguments) :
+- `contract_hash` : the hash of the contract that holds the ERC-20 tokens, your contract must have access to this contract in order to transfer the token to/from it. it will be checked in the contract and if it doesn't have access, the contract will revert the transaction.
+
+### **Direct**
+if the type is `Direct`, the contract will expect the following arguments in the `initiate` entrypoint (besides the `type`, `hash` and `destination` arguments) :
+- `amount : U512` : the amount of CSPRs that will be transferred to the other account, it must be in motes (10^9 CSPR = 1 CSPR)
+
+    ***Note*** : Direct type requires the purse of the contract to have enough CSPRs to transfer to the other account, if it doesn't have enough CSPRs, the contract will revert the transaction. You should call the contract using a session code(which is found in session folder), get its purse and transfer the `amount` CSPRs to it, then call the `initiate` entrypoint with the `Direct` type, otherwise the contract will fail.
+
+### **Custom**
+if the type is `Custom`, the contract will expect the following arguments in the `initiate` entrypoint (besides the `type`, `hash` and `destination` arguments) :
+- `contract_hash` : the hash of the contract that holds your tokens, this contract must have access to your tokens in order to transfer them, the contract with contract hash of `contract_hash` must have an `XXtransferXX` entrypoint, which transfers tokens from the contract to the given account hash.
+
+_**Note : In all 4 states above, you must pass an argument named `timeout:u64` which is the time, contract is useable in milliseconds. After that threshold, using contract's unlock entrypoint will return the tokens to first user!**_
+
+## How to unlock the contract
+after the contract is initiated, the other account can call the `unlock` entrypoint with the following arguments :
+
+- `secret:string` : the secret key that will be used to unlock the contract, it must be the same secret key that was used to generate the hash that was used to initiate the contract. **Note that after using `unlock` entrypoint, user's password goes public in `secret` field of storage, and can be used to unlock other contract**
