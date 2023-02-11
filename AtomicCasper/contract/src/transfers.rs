@@ -1,8 +1,8 @@
 use alloc::string::String;
-use casper_contract::contract_api::{runtime::{self, call_contract}, system::transfer_from_purse_to_account};
-use casper_types::{Key, ContractHash, account::{Account, AccountHash}, runtime_args, U512, U256, RuntimeArgs};
+use casper_contract::contract_api::runtime;
+use casper_types::{Key, U512, U256};
 
-use crate::{Error, constants, utils::{get_key_val, self}, erc20util, nftutil, native_util};
+use crate::{Error, constants, utils::get_key_val, erc20util, nftutil, native_util};
 
 pub fn transfer_to(secret_hash : &str){
     let saved_hash = get_key_val::<String>(constants::NAMED_KEY_HASH);

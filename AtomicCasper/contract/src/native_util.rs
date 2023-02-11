@@ -1,6 +1,6 @@
-use casper_contract::contract_api::{system::transfer_from_purse_to_account, runtime};
-use casper_types::{Key, U512, account::AccountHash};
-use crate::{constants, utils::{get_key_val, self, toKey}, Error};
+use casper_contract::{contract_api::{system::transfer_from_purse_to_account, runtime}, unwrap_or_revert::UnwrapOrRevert};
+use casper_types::{Key, U512};
+use crate::{constants, utils::{get_key_val, self}, Error};
 
 pub fn transfer_native_tokens_to(reciver : Key){
     // transfer amount to reciver from contract's purse
@@ -10,7 +10,7 @@ pub fn transfer_native_tokens_to(reciver : Key){
         _ => runtime::revert(Error::ReciverNotAnAccount)
     };
     let contract_purse = utils::get_contracts_purse();
-    transfer_from_purse_to_account(contract_purse, reciver_account_hash, amount, None);
+    transfer_from_purse_to_account(contract_purse, reciver_account_hash, amount, None).unwrap_or_revert_with(Error::NativeTransferFailed);
 }
 
 pub fn transfer_native_tokens_back(){

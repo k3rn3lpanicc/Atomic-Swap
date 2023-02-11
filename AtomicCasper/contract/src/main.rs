@@ -17,11 +17,9 @@ mod nftutil;
 mod native_util;
 #[cfg(not(target_arch = "wasm32"))]
 compile_error!("target arch should be wasm32: compile with '--target wasm32-unknown-unknown'");
-
 // We need to explicitly import the std alloc crate and `alloc::string::String` as we're in a
 // `no_std` environment.
 extern crate alloc;
-use core::borrow::Borrow;
 use alloc::{
     collections::BTreeSet,
     string::{String, ToString}, vec::Vec,
@@ -34,11 +32,11 @@ use casper_contract::{
     },
     unwrap_or_revert::UnwrapOrRevert,
 };
-use casper_types::{AccessRights, ApiError, CLValue, ContractPackageHash, RuntimeArgs, URef, U512, Key, account::AccountHash, ContractHash, system::CallStackElement, runtime_args, U256};
+use casper_types::{AccessRights, ApiError, CLValue, ContractPackageHash, RuntimeArgs, URef, U512, Key, ContractHash, runtime_args, U256};
 use constants::{get_entrypoints, get_named_keys};
 use utils::{
     check_hash_type, check_ownership, generate_hash, get_current_time, is_timed_out, set_end_time,
-    set_key, set_start_time, get_key_val, toKey
+    set_key, set_start_time, get_key_val, ToKey
 };
 /// An error enum which can be converted to a `u16` so it can be returned as an `ApiError::User`.
 #[repr(u16)]
@@ -72,6 +70,8 @@ pub enum Error {
     ReciverNotAnAccount = 26,
     OwnerNotSet = 27,
     OwnerReadError = 28,
+    NativeTransferFailed = 29,
+    RuntimeArgFailed = 30,
 }
 impl From<Error> for ApiError {
     fn from(error: Error) -> Self {
@@ -82,7 +82,6 @@ pub type TokenId = U256;
 
 #[no_mangle]
 pub extern "C" fn get_hash() {
-    let hash = utils::get_named_key_by_name(constants::NAMED_KEY_HASH);
     let hash = get_key_val::<String>(constants::NAMED_KEY_HASH);
     runtime::ret(CLValue::from_t(hash).unwrap_or_revert());
 }

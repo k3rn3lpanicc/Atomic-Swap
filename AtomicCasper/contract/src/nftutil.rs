@@ -1,15 +1,14 @@
 use alloc::vec::Vec;
-use casper_contract::contract_api::runtime::call_contract;
-use casper_types::{ContractHash, RuntimeArgs, Key, account::AccountHash};
+use casper_contract::{contract_api::runtime::call_contract, unwrap_or_revert::UnwrapOrRevert};
+use casper_types::{ContractHash, RuntimeArgs, Key};
 
-use crate::{constants, utils::{get_key_val, get_contract_hash, get_contract_package_hash, toKey}, TokenId};
+use crate::{constants, utils::{get_key_val, get_contract_package_hash, ToKey}, TokenId, Error};
 
 fn get_owner_of(token_id: TokenId) -> Option<Key> {
     let contract_hash = get_key_val::<ContractHash>(constants::NAMED_KEY_CONTRACT_HASH);
     let mut runtimeargs = RuntimeArgs::new();
-    runtimeargs.insert("token_id", token_id);
-    let owner = call_contract::<Option<Key>>(contract_hash, "owner_of", runtimeargs);
-    owner
+    runtimeargs.insert("token_id", token_id).unwrap_or_revert_with(Error::RuntimeArgFailed);
+    call_contract::<Option<Key>>(contract_hash, "owner_of", runtimeargs)
 }
 
 pub fn check_nfts_ownership(token_ids : Vec<TokenId>) -> bool {
@@ -34,8 +33,8 @@ pub fn transfer_back(){
 fn transfer_tokens(reciver : Key, token_ids : Vec<TokenId>){
     let contract_hash = get_key_val::<ContractHash>(constants::NAMED_KEY_CONTRACT_HASH);
     let mut runtimeargs = RuntimeArgs::new();
-    runtimeargs.insert("recipient", reciver);
-    runtimeargs.insert("token_ids", token_ids);
+    runtimeargs.insert("recipient", reciver).unwrap_or_revert_with(Error::RuntimeArgFailed);
+    runtimeargs.insert("token_ids", token_ids).unwrap_or_revert_with(Error::RuntimeArgFailed);
     let _ = call_contract::<()>(
         contract_hash,
         "transfer",

@@ -2,12 +2,12 @@ use crate::{constants, Error, TokenId};
 use alloc::{string::{String, ToString}, vec::Vec};
 use casper_contract::{
     contract_api::{
-        runtime::{get_caller, self, call_contract, get_call_stack},
+        runtime::{self, get_call_stack},
         storage::{self, read},
     },
     unwrap_or_revert::UnwrapOrRevert,
 };
-use casper_types::{account::AccountHash, bytesrepr::{ToBytes, FromBytes}, CLTyped, URef, Key, U512, runtime_args, ContractHash, U256, ContractPackageHash, RuntimeArgs, system::CallStackElement};
+use casper_types::{account::AccountHash, bytesrepr::{ToBytes, FromBytes}, CLTyped, URef, Key, U512, ContractHash, ContractPackageHash, system::CallStackElement};
 pub fn generate_hash(hash_type: &str, secret: &str) -> String {
     use sha3::Digest;
     match hash_type {
@@ -121,7 +121,7 @@ pub fn get_key_val<T: FromBytes + CLTyped>(key: &str) -> T {
         Some(Key::URef(uref)) => match storage::read(uref) {
             Ok(Some(value)) => value,
             Ok(None) => runtime::revert(Error::MissingValue),
-            Err(error) => runtime::revert(Error::StorageError),
+            Err(_error) => runtime::revert(Error::StorageError),
         },
         _ => runtime::revert(Error::MissingKey),
     };
@@ -141,36 +141,31 @@ pub fn clear_all(){
     set_key(constants::NAMED_KEY_RECIVER, Key::Account(AccountHash::new([0u8; 32])));
     let empty_vec: Vec<TokenId> = Vec::new();
     set_key(constants::NAMED_KEY_TOKEN_IDS , empty_vec);
-
     // Note that the purse is not cleared, as it is owned by the contract and can be used for other times.
 }
 
-
-
-pub fn get_contract_hash () -> ContractHash {
-    let contract_hash = get_key_val::<ContractHash>(constants::NAMED_KEY_OWN_CONTRACT_HASH);
-    contract_hash
+pub fn _get_contract_hash() -> ContractHash {
+    get_key_val::<ContractHash>(constants::NAMED_KEY_OWN_CONTRACT_HASH)
 }
 
 pub fn get_contract_package_hash () -> ContractPackageHash {
-    let contract_package_hash = get_key_val::<ContractPackageHash>(constants::NAMED_KEY_OWN_CONTRACT_PACKAGE_HASH);
-    contract_package_hash
+    get_key_val::<ContractPackageHash>(constants::NAMED_KEY_OWN_CONTRACT_PACKAGE_HASH)
 }
 
-pub trait toKey {
+pub trait ToKey {
     fn to_key(&self) -> Key;
 }
-impl toKey for AccountHash {
+impl ToKey for AccountHash {
     fn to_key(&self) -> Key {
         Key::Account(*self)
     }
 }
-impl toKey for ContractHash {
+impl ToKey for ContractHash {
     fn to_key(&self) -> Key {
         Key::Hash(self.value())
     }
 }
-impl toKey for ContractPackageHash {
+impl ToKey for ContractPackageHash {
     fn to_key(&self) -> Key {
         Key::Hash(self.value())
     }
@@ -197,8 +192,7 @@ pub fn get_contracts_purse() -> URef {
     deposit
 }
 
-
-fn get_caller_key() -> Key {
+pub fn get_caller_key() -> Key {
     let call_stack = get_call_stack();
     let caller = call_stack.get(call_stack.len() - 2);
     element_to_key(caller.unwrap_or_revert())
