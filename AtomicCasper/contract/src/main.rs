@@ -1,20 +1,11 @@
-/*
-TODO: Change NDPC contract and add this : whenever a nft is transferred,
-the contract should check if the token_id that is transferring to dst account
-is already in another holder_id or not, if it wasn't in any of the dst account's holders,
-then it should create a new holder_id for it, if it was in another holder_id, then it
-should just add the amount to the existing holder_id.
-*/
 #![no_std]
 #![no_main]
-//mod ndpc_types;
-//mod ndpc_utils;
 pub mod constants;
-mod utils;
-mod transfers;
 mod erc20util;
-mod nftutil;
 mod native_util;
+mod nftutil;
+mod transfers;
+mod utils;
 #[cfg(not(target_arch = "wasm32"))]
 compile_error!("target arch should be wasm32: compile with '--target wasm32-unknown-unknown'");
 // We need to explicitly import the std alloc crate and `alloc::string::String` as we're in a
@@ -22,7 +13,8 @@ compile_error!("target arch should be wasm32: compile with '--target wasm32-unkn
 extern crate alloc;
 use alloc::{
     collections::BTreeSet,
-    string::{String, ToString}, vec::Vec,
+    string::{String, ToString},
+    vec::Vec,
 };
 use casper_contract::{
     contract_api::{
@@ -32,11 +24,14 @@ use casper_contract::{
     },
     unwrap_or_revert::UnwrapOrRevert,
 };
-use casper_types::{AccessRights, ApiError, CLValue, ContractPackageHash, RuntimeArgs, URef, U512, Key, ContractHash, runtime_args, U256};
+use casper_types::{
+    runtime_args, AccessRights, ApiError, CLValue, ContractHash, ContractPackageHash, Key,
+    RuntimeArgs, URef, U256, U512,
+};
 use constants::{get_entrypoints, get_named_keys};
 use utils::{
-    check_hash_type, check_ownership, generate_hash, get_current_time, is_timed_out, set_end_time,
-    set_key, set_start_time, get_key_val, ToKey
+    check_hash_type, check_ownership, generate_hash, get_current_time, get_key_val, is_timed_out,
+    set_end_time, set_key, set_start_time, ToKey,
 };
 /// An error enum which can be converted to a `u16` so it can be returned as an `ApiError::User`.
 #[repr(u16)]
@@ -87,7 +82,7 @@ pub extern "C" fn get_hash() {
 }
 
 #[no_mangle]
-pub extern "C" fn refund(){
+pub extern "C" fn refund() {
     if !check_ownership() {
         runtime::revert(Error::AccessDenied);
     }
@@ -95,7 +90,7 @@ pub extern "C" fn refund(){
         runtime::revert(Error::EndTimeNotReached);
     }
     transfers::transfer_back();
-    utils::clear_all();    
+    utils::clear_all();
 }
 
 #[no_mangle]
@@ -131,11 +126,11 @@ pub extern "C" fn initiate() {
     }
     set_key(constants::NAMED_KEY_HASH, hash);
     set_key(constants::NAMED_KEY_HASH_TYPE, hash_type);
-    
+
     // Get the recipient
     let reciver = runtime::get_named_arg::<Key>(constants::ARG_RECEIVER);
     set_key(constants::NAMED_KEY_RECIVER, reciver);
-    
+
     {
         // Get timeout and set start_time and end_time
         let timeout = runtime::get_named_arg::<u64>(constants::ARG_TIMEOUT);
@@ -143,13 +138,13 @@ pub extern "C" fn initiate() {
         set_start_time(current_time);
         set_end_time(current_time + timeout);
     }
-    
+
     let type_ = get_key_val::<String>(constants::NAMED_KEY_TYPE);
     if type_ != "NFT" && type_ != "ERC-20" && type_ != "Direct" && type_ != "Custom" {
         runtime::revert(Error::TypeNotSupported);
     }
     // for NFT and ERC20 and Custom, we need to set the other contract hash
-    if type_.as_str() != "Direct"{
+    if type_.as_str() != "Direct" {
         let contract_hash = runtime::get_named_arg::<String>(constants::ARG_CONTRACT_HASH);
         set_key(constants::NAMED_KEY_CONTRACT_HASH, contract_hash);
     }
@@ -170,15 +165,15 @@ pub extern "C" fn initiate() {
             let token_ids = runtime::get_named_arg::<Vec<TokenId>>(constants::ARG_TOKEN_IDS);
             set_key(constants::NAMED_KEY_TOKEN_IDS, token_ids.clone());
             // Check that the given token_ids are owned by our contract
-            if !nftutil::check_nfts_ownership(token_ids){
+            if !nftutil::check_nfts_ownership(token_ids) {
                 runtime::revert(Error::NFTsNotOwnedByContract);
-            }            
+            }
         }
         "ERC-20" => {
             // Check if the contract has enough balance
             let contract_own_balance = erc20util::get_own_contract_balance();
             let amount = runtime::get_named_arg::<U256>(constants::ARG_AMOUNT);
-            if contract_own_balance < amount.as_u64(){
+            if contract_own_balance < amount.as_u64() {
                 runtime::revert(Error::NotEnoughBalance);
             }
         }
@@ -207,9 +202,9 @@ pub extern "C" fn initiate() {
                 runtime::revert(Error::NotEnoughBalance);
             }
             set_key(constants::NAMED_KEY_AMOUNT, amount);
-        },
+        }
         "Custom" => {
-            // todo
+            //TODO
         }
         _ => {
             runtime::revert(Error::TypeNotSupported);
@@ -230,28 +225,33 @@ pub extern "C" fn get_deposit_purse() {
 
 #[no_mangle]
 pub extern "C" fn init() {
-    
     // put the contract package hash into the named keys
-    let contract_package_hash = runtime::get_named_arg::<ContractPackageHash>(constants::NAMED_KEY_OWN_CONTRACT_PACKAGE_HASH);
+    let contract_package_hash = runtime::get_named_arg::<ContractPackageHash>(
+        constants::NAMED_KEY_OWN_CONTRACT_PACKAGE_HASH,
+    );
     let contract_package_hash_uref = storage::new_uref(contract_package_hash);
-    runtime::put_key(constants::NAMED_KEY_OWN_CONTRACT_PACKAGE_HASH, contract_package_hash_uref.into());
+    runtime::put_key(
+        constants::NAMED_KEY_OWN_CONTRACT_PACKAGE_HASH,
+        contract_package_hash_uref.into(),
+    );
 
-    let contract_hash = runtime::get_named_arg::<ContractHash>(constants::NAMED_KEY_OWN_CONTRACT_HASH);
+    let contract_hash =
+        runtime::get_named_arg::<ContractHash>(constants::NAMED_KEY_OWN_CONTRACT_HASH);
     let contract_hash_uref = storage::new_uref(contract_hash);
-    runtime::put_key(constants::NAMED_KEY_OWN_CONTRACT_HASH, contract_hash_uref.into());
+    runtime::put_key(
+        constants::NAMED_KEY_OWN_CONTRACT_HASH,
+        contract_hash_uref.into(),
+    );
 
-    
     let type_ = runtime::get_named_arg::<String>(constants::ARG_TYPE);
     let type_uref = storage::new_uref(type_);
     runtime::put_key(constants::NAMED_KEY_TYPE, type_uref.into());
-
 
     let caller = get_caller().to_key();
     let owner = storage::new_uref(caller);
     runtime::put_key(constants::NAMED_KEY_OWNER, owner.into());
     let purse = create_purse();
     runtime::put_key(constants::NAMED_KEY_PURSE, purse.into());
-
 }
 
 fn install_contract() {
@@ -275,11 +275,15 @@ fn install_contract() {
             .unwrap_or_revert()
             .pop()
             .unwrap_or_revert();
-    let _: () = runtime::call_contract(contract_hash, "init", runtime_args! {
-        constants::NAMED_KEY_OWN_CONTRACT_PACKAGE_HASH => package_hash,
-        constants::NAMED_KEY_OWN_CONTRACT_HASH => contract_hash,
-        constants::ARG_TYPE => type_,
-    });
+    let _: () = runtime::call_contract(
+        contract_hash,
+        "init",
+        runtime_args! {
+            constants::NAMED_KEY_OWN_CONTRACT_PACKAGE_HASH => package_hash,
+            constants::NAMED_KEY_OWN_CONTRACT_HASH => contract_hash,
+            constants::ARG_TYPE => type_,
+        },
+    );
     let mut urefs = BTreeSet::new();
     urefs.insert(constructor_access);
     storage::remove_contract_user_group_urefs(package_hash, "constructor", urefs)

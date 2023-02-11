@@ -1,5 +1,8 @@
 use crate::{constants, Error, TokenId};
-use alloc::{string::{String, ToString}, vec::Vec};
+use alloc::{
+    string::{String, ToString},
+    vec::Vec,
+};
 use casper_contract::{
     contract_api::{
         runtime::{self, get_call_stack},
@@ -7,7 +10,12 @@ use casper_contract::{
     },
     unwrap_or_revert::UnwrapOrRevert,
 };
-use casper_types::{account::AccountHash, bytesrepr::{ToBytes, FromBytes}, CLTyped, URef, Key, U512, ContractHash, ContractPackageHash, system::CallStackElement};
+use casper_types::{
+    account::AccountHash,
+    bytesrepr::{FromBytes, ToBytes},
+    system::CallStackElement,
+    CLTyped, ContractHash, ContractPackageHash, Key, URef, U512,
+};
 pub fn generate_hash(hash_type: &str, secret: &str) -> String {
     use sha3::Digest;
     match hash_type {
@@ -30,7 +38,7 @@ pub fn generate_hash(hash_type: &str, secret: &str) -> String {
             let mut hasher = sha3::Keccak512::new();
             hasher.update(secret);
             hex::encode(hasher.finalize())
-        },
+        }
         "blake2b" => {
             let bytes = runtime::blake2b(secret.as_bytes());
             hex::encode(bytes)
@@ -87,7 +95,6 @@ pub fn _is_started() -> bool {
     get_current_time() > _get_start_time()
 }
 
-
 pub fn check_ownership() -> bool {
     let caller = get_caller_key();
     let owner = get_owner();
@@ -110,8 +117,7 @@ where
     if runtime::get_key(key_name).is_none() {
         let key_uref = storage::new_uref(key_value).into();
         runtime::put_key(key_name, key_uref);
-    }
-    else{
+    } else {
         let key_uref = get_named_key_by_name(key_name);
         storage::write(key_uref, key_value);
     }
@@ -128,19 +134,25 @@ pub fn get_key_val<T: FromBytes + CLTyped>(key: &str) -> T {
     value
 }
 
-pub fn clear_all(){
+pub fn clear_all() {
     set_key(constants::NAMED_KEY_SECRET, "".to_string());
     set_key(constants::NAMED_KEY_HASH, "".to_string());
     set_key::<u64>(constants::NAMED_KEY_START_TIME, 0);
     set_key::<u64>(constants::NAMED_KEY_END_TIME, 0);
-    set_key(constants::NAMED_KEY_OWNER, AccountHash::new([0u8; 32]).to_key());
+    set_key(
+        constants::NAMED_KEY_OWNER,
+        AccountHash::new([0u8; 32]).to_key(),
+    );
     set_key(constants::NAMED_KEY_AMOUNT, U512::from(0u64));
     set_key(constants::NAMED_KEY_CONTRACT_HASH, "".to_string());
     set_key(constants::NAMED_KEY_HASH_TYPE, "".to_string());
     set_key(constants::NAMED_KEY_TYPE, "".to_string());
-    set_key(constants::NAMED_KEY_RECIVER, Key::Account(AccountHash::new([0u8; 32])));
+    set_key(
+        constants::NAMED_KEY_RECIVER,
+        Key::Account(AccountHash::new([0u8; 32])),
+    );
     let empty_vec: Vec<TokenId> = Vec::new();
-    set_key(constants::NAMED_KEY_TOKEN_IDS , empty_vec);
+    set_key(constants::NAMED_KEY_TOKEN_IDS, empty_vec);
     // Note that the purse is not cleared, as it is owned by the contract and can be used for other times.
 }
 
@@ -148,7 +160,7 @@ pub fn _get_contract_hash() -> ContractHash {
     get_key_val::<ContractHash>(constants::NAMED_KEY_OWN_CONTRACT_HASH)
 }
 
-pub fn get_contract_package_hash () -> ContractPackageHash {
+pub fn get_contract_package_hash() -> ContractPackageHash {
     get_key_val::<ContractPackageHash>(constants::NAMED_KEY_OWN_CONTRACT_PACKAGE_HASH)
 }
 
@@ -177,7 +189,9 @@ pub fn already_initialized() -> bool {
         return false;
     }
     let hash_uref = hash_uref.unwrap_or_revert().into_uref().unwrap_or_revert();
-    let hash = storage::read::<String>(hash_uref).unwrap_or_revert().unwrap_or_revert();
+    let hash = storage::read::<String>(hash_uref)
+        .unwrap_or_revert()
+        .unwrap_or_revert();
     if hash.as_str() == "" {
         return false;
     }
