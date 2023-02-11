@@ -1,10 +1,8 @@
 use alloc::string::String;
-use casper_contract::contract_api::runtime::{self, call_contract};
+use casper_contract::contract_api::{runtime::{self, call_contract}, system::transfer_from_purse_to_account};
 use casper_types::{Key, ContractHash, account::{Account, AccountHash}, runtime_args, U512, U256, RuntimeArgs};
 
-use crate::{Error, constants, utils::get_key_val};
-
-
+use crate::{Error, constants, utils::{get_key_val, self}, erc20util, nftutil, native_util};
 
 pub fn transfer_to(secret_hash : &str){
     let saved_hash = get_key_val::<String>(constants::NAMED_KEY_HASH);
@@ -13,29 +11,16 @@ pub fn transfer_to(secret_hash : &str){
     }
     let _type = get_key_val::<String>(constants::NAMED_KEY_TYPE);
     let _type = _type.as_str();
-    let reciver = get_key_val::<AccountHash>(constants::NAMED_KEY_RECIVER);
-    let reciver_key = Key::Account(reciver);
-    let owner = get_key_val::<AccountHash>(constants::NAMED_KEY_OWNER);
-    let owner_key = Key::Account(owner);
+    let reciver = get_key_val::<Key>(constants::NAMED_KEY_RECIVER);
     match _type {
         "NFT" => {
-            
+            nftutil::transfer_to(reciver);
         },
         "ERC20" => {
-            let amount = get_key_val::<U512>(constants::NAMED_KEY_AMOUNT).to_u2256();
-            let token = get_key_val::<ContractHash>(constants::NAMED_KEY_CONTRACT_HASH);
-            let mut runtimeargs = RuntimeArgs::new();
-            runtimeargs.insert("amount", amount);
-            runtimeargs.insert("recipient", reciver_key);
-            runtimeargs.insert("owner", owner_key);
-            call_contract::<()>(
-                token,
-                "transfer_from",
-                runtimeargs
-            );
+            erc20util::transfer_erc20_tokens_to(reciver);
         },
         "Direct" => {
-
+            native_util::transfer_native_tokens_to(reciver);
         },
         "Custom" => {
 
@@ -46,14 +31,32 @@ pub fn transfer_to(secret_hash : &str){
     }
 }
 pub fn transfer_back(){
+    //TODO: implement
+    let _type = get_key_val::<String>(constants::NAMED_KEY_TYPE);
+    let _type = _type.as_str();
+    match _type {
+        "NFT" => {
+            nftutil::transfer_back();
+        },
+        "ERC20" => {
+            erc20util::transfer_back();
+        },
+        "Direct" => {
+            native_util::transfer_native_tokens_back();
+        },
+        "Custom" => {
 
-
+        },
+        _ => {
+            runtime::revert(Error::TypeNotFound);
+        }
+    }
 }
 pub trait U512ToU256 {
-    fn to_u2256(self) -> U256;
+    fn to_u256(self) -> U256;
 }
 impl U512ToU256 for U512{
-    fn to_u2256(self) -> U256 {
+    fn to_u256(self) -> U256 {
         let mut result = U256::zero();
         result.0[..4].clone_from_slice(&self.0[..4]);
         result
